@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Emotion Classifier | Record</title>
+
+    <!-- Latest compiled and minified Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-top: 20px;
+        }
+        #controls {
+            margin: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #recordingsList {
+            list-style: none;
+            padding: 0;
+        }
+        #recordingsList li {
+            background-color: #fff;
+            margin: 10px auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Speech Emotion Detection</h1>
+    <h1>Enter Your Audio</h1>
+    <div id="controls">
+        <button id="recordButton">Record</button>
+        <button id="pauseButton" disabled>Pause</button>
+        <button id="stopButton" disabled>Stop</button>
+    </div>
+    <div id="formats">Supported Format: .wav</div>
+    <p><strong>Recordings:</strong></p>
+    <ol id="recordingsList"></ol>
+
+    <!-- External JS Scripts -->
+    <script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+    <script>
+        // Setting up variables
+        let audioContext;
+        let recorder;
+        let gumStream; // Audio input stream from getUserMedia
+
+        const recordButton = document.getElementById('recordButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const stopButton = document.getElementById('stopButton');
+
+        recordButton.addEventListener('click', startRecording);
+        pauseButton.addEventListener('click', pauseRecording);
+        stopButton.addEventListener('click', stopRecording);
+
+        function startRecording() {
+            // Disable the record button and enable the stop and pause buttons
+            recordButton.disabled = true;
+            stopButton.disabled = false;
+            pauseButton.disabled = false;
+
+            // Access microphone
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                audioContext = new AudioContext();
+                gumStream = stream;
+
+                const input = audioContext.createMediaStreamSource(stream);
+                recorder = new Recorder(input, { numChannels: 1 });
+                recorder.record();
+
+                console.log('Recording started');
+            }).catch((err) => {
+                console.error('Error accessing microphone:', err);
+            });
+        }
+
+        function pauseRecording() {
+            if (recorder.recording) {
+                // Pause the recording
+                recorder.stop();
+                pauseButton.textContent = 'Resume';
+                console.log('Recording paused');
+            } else {
+                // Resume the recording
+                recorder.record();
+                pauseButton.textContent = 'Pause';
+                console.log('Recording resumed');
+            }
+        }
+
+        function stopRecording() {
+            // Disable stop and pause buttons, enable record button
+            stopButton.disabled = true;
+            recordButton.disabled = false;
+            pauseButton.disabled = true;
+
+            // Stop the recording
+            recorder.stop();
+            gumStream.getAudioTracks()[0].stop();
+
+            // Export and save the recording
+            recorder.exportWAV((blob) => {
+                const url = URL.createObjectURL(blob);
+                const li = document.createElement('li');
+                const audio = document.createElement('audio');
+                const link = document.createElement('a');
+
+                audio.controls = true;
+                audio.src = url;
+
+                link.href = url;
+                link.download = 'recording.wav';
+                link.textContent = 'Download';
+
+                li.appendChild(audio);
+                li.appendChild(document.createElement('br'));
+                li.appendChild(link);
+                recordingsList.appendChild(li);
+            });
+
+            console.log('Recording stopped and saved');
+        }
+    </script>
+</body>
+</html>
